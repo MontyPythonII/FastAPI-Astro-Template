@@ -1,0 +1,33 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+// Already-authenticated visitors skip the form.
+if (Astro.locals.user)
+{
+    return Astro.redirect('/dashboard');
+}
+
+const params = Astro.url.searchParams;
+const error : string | null = params.get('error');
+const registered : boolean = params.has('registered');
+---
+
+<Layout title="Log in">
+	<section class="card">
+		<h1>Log in</h1>
+		{registered && <p class="notice success">Account created — please log in.</p>}
+		{error && <p class="notice error">{error}</p>}
+		<form method="post" action="/api/auth/login" class="form">
+			<label>
+				Email
+				<input type="email" name="email" required autocomplete="email" />
+			</label>
+			<label>
+				Password
+				<input type="password" name="password" required autocomplete="current-password" />
+			</label>
+			<button type="submit">Log in</button>
+		</form>
+		<p class="muted">No account yet? <a href="/register">Register</a>.</p>
+	</section>
+</Layout>

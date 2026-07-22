@@ -1,0 +1,39 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const user = Astro.locals.user;
+if (!user)
+{
+    return Astro.redirect('/login');
+}
+
+const params = Astro.url.searchParams;
+const error : string | null = params.get('error');
+const updated : boolean = params.has('updated');
+---
+
+<Layout title="Profile">
+	<section class="card">
+		<h1>Edit profile</h1>
+		<p class="muted">Change your email or set a new password.</p>
+		{updated && <p class="notice success">Profile updated.</p>}
+		{error && <p class="notice error">{error}</p>}
+
+		<form method="post" action="/api/profile" class="form">
+			<label>
+				Email
+				<input type="email" name="email" value={user.email} autocomplete="email" />
+			</label>
+			<label>
+				New password
+				<input
+					type="password"
+					name="password"
+					placeholder="Leave blank to keep current"
+					autocomplete="new-password"
+				/>
+			</label>
+			<button type="submit">Save changes</button>
+		</form>
+	</section>
+</Layout>

@@ -1,0 +1,28 @@
+# The host virtualenv must never reach the image — `uv sync` builds a fresh one
+# against the target platform, and copying this in would shadow it.
+.venv/
+
+__pycache__/
+*.py[cod]
+
+# Local SQLite databases from `python main.py` runs.
+*.db
+
+.git/
+.gitignore
+.vscode/
+.idea/
+.DS_Store
+
+# Never bake secrets into an image layer.
+.env
+.env.*
+!.env.example
+
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+Dockerfile
+.dockerignore
+README.md

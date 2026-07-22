@@ -1,0 +1,95 @@
+# Repo-wide ignores. The frontend keeps its own .gitignore for Astro build
+# artifacts, and uv writes a self-ignoring .gitignore inside backend/.venv,
+# so neither is repeated here.
+
+# ── Secrets ─────────────────────────────────────────────────
+# .env holds AUTH_SECRET, which signs every JWT — anyone who reads it can
+# forge a login as any user. .env.example is the committed template and is
+# deliberately re-included below.
+.env
+.env.*
+!.env.example
+
+# ── Databases ───────────────────────────────────────────────
+# Running `python main.py` without AUTH_DB_PATH set falls back to ./test.db,
+# which then holds real password hashes. In Docker this lives in the db-data
+# volume instead and never reaches the working tree.
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# ── Python ──────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.Python
+build/
+develop-eggs/
+eggs/
+sdist/
+wheels/
+
+# Virtualenvs, in case one is created outside uv's default location.
+.venv/
+venv/
+env/
+
+# Tool caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pyre/
+.dmypy.json
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# ── Node ────────────────────────────────────────────────────
+# Also covered by frontend/.gitignore; repeated here so any future JS package
+# added at the root is protected without a new ignore file.
+node_modules/
+.npm/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+
+# ── Astro ───────────────────────────────────────────────────
+dist/
+.astro/
+
+# ── Editors ─────────────────────────────────────────────────
+# .vscode is ignored except the two files Astro ships to share editor setup
+# across a team: the recommended-extension list and the dev-server launch task.
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+.idea/
+*.swp
+*.swo
+*~
+
+# Personal Claude Code overrides. The committed .claude/settings.json, if one
+# is added, stays shared.
+.claude/settings.local.json
+
+# ── OS ──────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# ── Logs ────────────────────────────────────────────────────
+*.log
+logs/

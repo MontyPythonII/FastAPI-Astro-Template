@@ -1,0 +1,87 @@
+---
+import type { User } from '../lib/backend';
+
+interface Props
+{
+    user : User | null;
+}
+
+const { user } = Astro.props;
+---
+
+<header class="nav">
+	<a class="brand" href="/">FastAPI × Astro</a>
+	<nav class="nav-links">
+		{
+			user ? (
+				<>
+					<a href="/dashboard">Dashboard</a>
+					<a href="/profile">Profile</a>
+					{user.isSuperuser && <a href="/admin">Admin</a>}
+					<form method="post" action="/api/auth/logout" class="logout-form">
+						<button type="submit" class="link-button">Log out</button>
+					</form>
+				</>
+			) : (
+				<>
+					<a href="/login">Log in</a>
+					<a href="/register">Register</a>
+				</>
+			)
+		}
+	</nav>
+</header>
+
+<style>
+	.nav
+	{
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		max-width: var(--maxw);
+		margin: 1.25rem auto 0;
+		padding: 0 1.25rem;
+	}
+
+	.brand
+	{
+		font-weight: 700;
+		color: var(--color-text);
+	}
+
+	.brand:hover
+	{
+		text-decoration: none;
+	}
+
+	.nav-links
+	{
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		font-size: 0.92rem;
+	}
+
+	.logout-form
+	{
+		margin: 0;
+	}
+
+	.link-button
+	{
+		background: none;
+		border: none;
+		padding: 0;
+		font: inherit;
+		font-weight: 400;
+		color: var(--color-accent);
+		cursor: pointer;
+	}
+
+	.link-button:hover
+	{
+		background: none;
+		text-decoration: underline;
+	}
+</style>

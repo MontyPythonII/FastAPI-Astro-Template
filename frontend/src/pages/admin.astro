@@ -1,0 +1,111 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { fetchUserById, BackendError, type User } from '../lib/backend';
+import { readToken } from '../lib/session';
+
+// Middleware already restricts this route to superusers; re-check for types.
+const currentUser = Astro.locals.user;
+if (!currentUser?.isSuperuser)
+{
+    return Astro.redirect('/dashboard');
+}
+
+const params = Astro.url.searchParams;
+const lookupId : string = params.get('id')?.trim() ?? '';
+const error : string | null = params.get('error');
+const updated : boolean = params.has('updated');
+const deleted : boolean = params.has('deleted');
+
+// A lookup is a plain GET with ?id=<uuid>; the managed user is fetched here at
+// render time. Mutations go through /api/admin/user.
+let target : User | null = null;
+let lookupError : string | null = null;
+
+if (lookupId)
+{
+    const token : string | undefined = readToken(Astro.cookies);
+    try
+    {
+        target = await fetchUserById(token ?? '', lookupId);
+    }
+    catch (err)
+    {
+        lookupError = err instanceof BackendError && err.status === 404
+            ? 'No user found with that id.'
+            : 'Could not load that user.';
+    }
+}
+---
+
+<Layout title="Admin">
+	<section class="card">
+		<h1>User administration</h1>
+		<p class="muted">Look up any account by its UUID to change its flags or delete it.</p>
+
+		{deleted && <p class="notice success">User deleted.</p>}
+		{updated && <p class="notice success">User updated.</p>}
+		{error && <p class="notice error">{error}</p>}
+
+		<form method="get" action="/admin" class="form">
+			<label>
+				User UUID
+				<input type="text" name="id" value={lookupId} placeholder="00000000-0000-0000-0000-000000000000" required />
+			</label>
+			<button type="submit">Look up</button>
+		</form>
+
+		{lookupError && <p class="notice error">{lookupError}</p>}
+
+		{
+			target && (
+				<div class="target">
+					<h2>{target.email}</h2>
+					<p class="muted"><code>{target.id}</code></p>
+
+					<form method="post" action="/api/admin/user" class="form">
+						<input type="hidden" name="action" value="update" />
+						<input type="hidden" name="id" value={target.id} />
+						<label class="checkbox">
+							<input type="checkbox" name="isActive" checked={target.isActive} />
+							Active
+						</label>
+						<label class="checkbox">
+							<input type="checkbox" name="isSuperuser" checked={target.isSuperuser} />
+							Superuser
+						</label>
+						<label class="checkbox">
+							<input type="checkbox" name="isVerified" checked={target.isVerified} />
+							Verified
+						</label>
+						<button type="submit">Save flags</button>
+					</form>
+
+					<form method="post" action="/api/admin/user" class="danger-form">
+						<input type="hidden" name="action" value="delete" />
+						<input type="hidden" name="id" value={target.id} />
+						<button type="submit" class="danger">Delete user</button>
+					</form>
+				</div>
+			)
+		}
+	</section>
+</Layout>
+
+<style>
+	.target
+	{
+		margin-top: 1.5rem;
+		padding-top: 1.25rem;
+		border-top: 1px solid var(--color-border);
+	}
+
+	.target h2
+	{
+		margin-bottom: 0.25rem;
+	}
+
+	.danger-form
+	{
+		margin-top: 0.5rem;
+	}
+</style>

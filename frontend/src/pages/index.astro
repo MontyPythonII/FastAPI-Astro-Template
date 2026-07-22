@@ -1,0 +1,5 @@
+---
+// Landing page is just a router: signed-in users go to their dashboard,
+// everyone else to login.
+return Astro.redirect(Astro.locals.user ? '/dashboard' : '/login');
+---

@@ -1,0 +1,83 @@
+# FastAPI-Astro-Template production stack.
+#
+#   docker compose up -d --build          run the site
+#   docker compose --profile tunnel up -d  ...and expose it publicly
+#
+# Values in ${...} come from the gitignored .env — see .env.example.
+
+services:
+  backend:
+    build: ./backend
+    environment:
+      # :? means compose refuses to start if this is unset, so the API can
+      # never come up signing tokens with the development fallback secret.
+      AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET is not set — copy .env.example to .env}
+      # Points SQLite at the named volume below rather than the image.
+      AUTH_DB_PATH: /data/${COMPOSE_PROJECT_NAME:-db}.db
+      ENVIRONMENT: ${ENVIRONMENT:-local}
+      # Seeds the admin account on first boot. Blank by default, which skips
+      # seeding rather than creating an account with an empty password.
+      FIRST_SUPERUSER: ${FIRST_SUPERUSER:-}
+      FIRST_SUPERUSER_PASSWORD: ${FIRST_SUPERUSER_PASSWORD:-}
+    volumes:
+      - db-data:/data
+    # Reachable only from other services on this network — never published
+    # to the host, so the API is not exposed to the internet.
+    expose:
+      - "7070"
+    restart: unless-stopped
+    healthcheck:
+      # /health is unauthenticated and does no work; the /users routes
+      # require a bearer token and would answer 401 here.
+      # python-slim has no curl, so urllib stands in — it raises on non-2xx.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:7070/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      # Generous, because the first boot creates the SQLite schema.
+      start_period: 30s
+
+  frontend:
+    build: ./frontend
+    environment:
+      # Internal DNS: compose resolves "backend" to that container.
+      BACKEND_BASE_URL: http://backend:7070
+      # Drives the httpOnly session cookie's Secure flag: set to production and
+      # the cookie is HTTPS-only (correct behind the tunnel), unset for http dev.
+      ENVIRONMENT: ${ENVIRONMENT:-local}
+      HOST: 0.0.0.0
+      PORT: "7071"
+    ports:
+      # Host port (yours to choose) : container port (always 7071).
+      - "${WEB_PORT:-8080}:7071"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      # Node 22 has global fetch, so no curl or wget needed in the image.
+      test: ["CMD", "node", "-e", "fetch('http://localhost:7071/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+
+  # Public access without opening a single router port. Held behind a profile
+  # so the everyday `docker compose up` ignores it until you have a token:
+  #   docker compose --profile tunnel up -d
+  # In the Cloudflare dashboard, point the hostname at http://frontend:7071.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    profiles: ["tunnel"]
+    # Defaults to empty rather than erroring: compose interpolates every
+    # service before profiles are applied, so a hard :? here would break
+    # even a plain `docker compose up`. Set TUNNEL_TOKEN in .env first.
+    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN:-}
+    depends_on:
+      frontend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  # Survives `docker compose down`. Holds the user/auth SQLite database.
+  db-data:
