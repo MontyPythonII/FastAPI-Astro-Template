@@ -5,10 +5,6 @@ frontend, wired together with Docker Compose. Authentication, session handling,
 user management, and public access are done — clone it and start building the
 part that is actually yours.
 
-The defining choice: **the API is never published to the browser.** Astro runs
-server-side as a backend-for-frontend, so the only thing on the public internet
-is the Astro server.
-
 ---
 
 ## What you get
