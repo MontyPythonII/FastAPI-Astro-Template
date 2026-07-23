@@ -94,6 +94,7 @@ Everything lives in `.env` (gitignored). `.env.example` is the template.
 | :--- | :---: | :--- | :--- |
 | `AUTH_SECRET` | **yes** | — | Signs every JWT and reset/verify token. Rotate it and all sessions die. |
 | `WEB_PORT` | no | `8080` | Host port the site is published on |
+| `SERVER_PORT` | no | `7070` | Port the API binds, everywhere it is referenced |
 | `COMPOSE_PROJECT_NAME` | no | — | Prefixes containers, the volume, and the SQLite filename |
 | `ENVIRONMENT` | no | `local` | `production` turns on the cookie `Secure` flag |
 | `FIRST_SUPERUSER` | no | blank | Admin email, ensured on every boot |
@@ -107,28 +108,36 @@ Notes worth knowing:
   seeding is skipped entirely rather than creating a passwordless admin.
 - **`ENVIRONMENT=production` is required for HTTPS deployments.** Without it the
   session cookie is sent without `Secure`.
-- `SERVER_PORT` only affects `python main.py` during local development; the
-  container always binds 7070.
+- **`SERVER_PORT` is the single source of truth for the API port.** Compose
+  passes it to the container, and derives the healthcheck URL, the `expose`
+  entry, and the frontend's `BACKEND_BASE_URL` from the same value — so
+  changing it in `.env` moves the whole API in one edit. The backend is never
+  published to the host either way; only `WEB_PORT` is reachable from outside.
+- **`.env` is read by compose, not by Python.** `uv run main.py` picks up
+  `SERVER_PORT` from the shell environment, so pass the file explicitly when
+  running outside Docker (see below) or the default 7070 applies.
 
 ---
 
 ## Local development (no Docker)
 
-Two terminals. The Astro dev server falls back to `http://localhost:7070` when
-`BACKEND_BASE_URL` is unset, so nothing needs configuring.
+Two terminals. `--env-file` is what makes `.env` apply outside compose; without
+it both halves fall back to port 7070, which is fine unless you changed
+`SERVER_PORT`. The Astro dev server points at `http://localhost:$SERVER_PORT`
+when `BACKEND_BASE_URL` is unset, so nothing else needs configuring.
 
 ```bash
-# terminal 1 — API with autoreload, docs at http://localhost:7070/docs
+# terminal 1 — API with autoreload, docs at http://localhost:$SERVER_PORT/docs
 cd backend
 uv sync
-uv run main.py
+uv run --env-file ../.env main.py
 ```
 
 ```bash
 # terminal 2 — site at http://localhost:7071
 cd frontend
 npm install
-npm run dev
+set -a && . ../.env && set +a && npm run dev
 ```
 
 This writes a local `backend/test.db` (gitignored) rather than touching the

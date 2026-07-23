@@ -85,7 +85,7 @@ your schema starts changing under real data, add Alembic.
 | :--- | :--- | :--- |
 | `AUTH_SECRET` | `SECRET` | Signs JWTs and reset/verify tokens. **Always override.** |
 | `AUTH_DB_PATH` | `./test.db` | SQLite file path. Compose points this at the `db-data` volume. |
-| `SERVER_PORT` | `7070` | Port for `main.py` only; the container always binds 7070. |
+| `SERVER_PORT` | `7070` | Port uvicorn binds, in the container and under `main.py` alike. |
 | `FIRST_SUPERUSER` | blank | Admin email, ensured on every boot |
 | `FIRST_SUPERUSER_PASSWORD` | blank | Admin password, used only on creation |
 

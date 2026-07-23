@@ -1,0 +1,22 @@
+# Local-development overlay for docker-compose.yml.
+#
+# Not loaded by default. Compose merges it only when COMPOSE_FILE names both
+# files, which .env.example does on one commented line:
+#
+#     COMPOSE_FILE=docker-compose.yml:docker-compose.local.yml
+#
+# The base file leaves the backend unpublished on purpose — the frontend
+# reaches it over the compose network, and nothing on the host can. That is
+# what production wants, but it also means http://localhost:$SERVER_PORT/docs
+# does not answer. This overlay publishes the API for exactly that reason.
+
+services:
+  backend:
+    ports:
+      # Both halves track SERVER_PORT, so the port you browse to is the port
+      # in .env — no second value to keep in sync.
+      #
+      # The 127.0.0.1 prefix is load-bearing: bare "7070:7070" binds 0.0.0.0
+      # and hands the unauthenticated /docs surface to every machine on the
+      # network. Loopback keeps it on this host.
+      - "127.0.0.1:${SERVER_PORT:-7070}:${SERVER_PORT:-7070}"

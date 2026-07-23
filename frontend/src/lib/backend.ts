@@ -5,9 +5,11 @@
  * file. Nothing in here knows about cookies or Astro.
  */
 
-// Compose injects BACKEND_BASE_URL (http://backend:7070); the fallback is for
-// running the SSR server locally against a backend on the host.
-const backendBaseUrl : string = process.env.BACKEND_BASE_URL ?? 'http://localhost:7070';
+// Compose injects BACKEND_BASE_URL (http://backend:$SERVER_PORT); the fallback
+// is for running the SSR server locally against a backend on the host, and
+// tracks SERVER_PORT so both halves move together when that one value changes.
+const backendPort : string = process.env.SERVER_PORT || '7070';
+const backendBaseUrl : string = process.env.BACKEND_BASE_URL ?? `http://localhost:${backendPort}`;
 
 // The user shape the app works with, camelCased from the backend's snake_case.
 export interface User

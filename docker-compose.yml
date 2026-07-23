@@ -15,6 +15,10 @@ services:
       # Points SQLite at the named volume below rather than the image.
       AUTH_DB_PATH: /data/${COMPOSE_PROJECT_NAME:-db}.db
       ENVIRONMENT: ${ENVIRONMENT:-local}
+      # The port uvicorn binds inside the container. Every other reference to
+      # the API port below derives from this same value, so changing it in
+      # .env moves the whole stack in one edit.
+      SERVER_PORT: ${SERVER_PORT:-7070}
       # Seeds the admin account on first boot. Blank by default, which skips
       # seeding rather than creating an account with an empty password.
       FIRST_SUPERUSER: ${FIRST_SUPERUSER:-}
@@ -24,13 +28,13 @@ services:
     # Reachable only from other services on this network — never published
     # to the host, so the API is not exposed to the internet.
     expose:
-      - "7070"
+      - "${SERVER_PORT:-7070}"
     restart: unless-stopped
     healthcheck:
       # /health is unauthenticated and does no work; the /users routes
       # require a bearer token and would answer 401 here.
       # python-slim has no curl, so urllib stands in — it raises on non-2xx.
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:7070/health', timeout=5)"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:${SERVER_PORT:-7070}/health', timeout=5)"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -40,8 +44,9 @@ services:
   frontend:
     build: ./frontend
     environment:
-      # Internal DNS: compose resolves "backend" to that container.
-      BACKEND_BASE_URL: http://backend:7070
+      # Internal DNS: compose resolves "backend" to that container. The port
+      # tracks SERVER_PORT so the BFF follows the API wherever it binds.
+      BACKEND_BASE_URL: http://backend:${SERVER_PORT:-7070}
       # Drives the httpOnly session cookie's Secure flag: set to production and
       # the cookie is HTTPS-only (correct behind the tunnel), unset for http dev.
       ENVIRONMENT: ${ENVIRONMENT:-local}

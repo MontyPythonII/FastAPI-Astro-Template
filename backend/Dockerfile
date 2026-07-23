@@ -9,7 +9,8 @@ COPY --from=ghcr.io/astral-sh/uv:0.11.21 /uv /usr/local/bin/uv
 WORKDIR /app
 
 ENV PYTHONUNBUFFERED=1 \
-    UV_LINK_MODE=copy
+    UV_LINK_MODE=copy \
+    SERVER_PORT=7070
 
 # Dependencies as their own layer: source edits below this line will not
 # trigger a full reinstall on rebuild.
@@ -31,7 +32,12 @@ USER appuser
 # every time the container starts.
 ENV PATH="/app/.venv/bin:$PATH"
 
+# Documentation only, and fixed at build time — the runtime port comes from
+# SERVER_PORT below, which compose overrides per-deployment.
 EXPOSE 7070
 
+# Wrapped in sh so SERVER_PORT expands at container start rather than being
+# frozen into the image; `exec` hands PID 1 back to uvicorn so it still
+# receives SIGTERM directly and shuts down gracefully on `compose down`.
 # No --reload here; main.py's reload=True is a development-only convenience.
-CMD ["uvicorn", "app.app:app", "--host", "0.0.0.0", "--port", "7070"]
+CMD ["sh", "-c", "exec uvicorn app.app:app --host 0.0.0.0 --port ${SERVER_PORT:-7070}"]
